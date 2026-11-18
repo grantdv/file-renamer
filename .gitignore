@@ -1,0 +1,16 @@
+# Xcode
+.DS_Store
+xcuserdata/
+*.xcuserstate
+build/
+DerivedData/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Packages/
+Package.resolved
+
+# Keys never belong in the repo
+*.key
+*.pem
