@@ -40,6 +40,13 @@ cat > "$APP/Contents/Info.plist" <<'EOF'
     <true/>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <!-- Endpoints are user-configured and are very often plain-HTTP local/self-hosted
+         LLM servers (Ollama, llama.cpp, ...), so allow arbitrary loads. -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+    </dict>
 </dict>
 </plist>
 EOF

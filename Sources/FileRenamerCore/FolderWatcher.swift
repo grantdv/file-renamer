@@ -27,7 +27,10 @@ final class FolderWatcher {
                 DispatchQueue.main.async { w.onChange() }
             },
             &context, paths, FSEventStreamEventId(kFSEventStreamEventIdSinceNow), 0.5, flags
-        ) else { return }
+        ) else {
+            NSLog("FileRenamer: FSEventStreamCreate FAILED for \(folder.lastPathComponent)")
+            return
+        }
         stream = s
         FSEventStreamSetDispatchQueue(s, DispatchQueue.global(qos: .utility))
         FSEventStreamStart(s)

@@ -1,4 +1,5 @@
 import Foundation
+import PDFKit
 
 // MARK: - Classification, naming rules, prompts
 
@@ -6,8 +7,39 @@ enum Naming {
     static let imageExts: Set<String> = ["jpg", "jpeg", "png", "heic", "heif", "webp", "gif", "tiff", "bmp"]
     static let textExts: Set<String> = [
         "txt", "md", "markdown", "csv", "json", "log", "ini", "toml", "yaml", "yml", "xml",
-        "swift", "py", "js", "ts", "html", "css", "sh", "rb", "go", "rs", "c", "h", "cpp"
+        "swift", "py", "js", "ts", "html", "css", "sh", "rb", "go", "rs", "c", "h", "cpp",
+        "pdf"
     ]
+
+    // MARK: PDF text extraction
+
+    /// Readable text from a PDF's first pages (capped), via PDFKit.
+    /// Returns nil when the PDF can't be opened or has no text layer
+    /// (scanned/image-only or protected documents).
+    static func pdfText(_ url: URL, maxPages: Int = 5, maxChars: Int = 4000) -> String? {
+        guard let doc = PDFDocument(url: url), doc.pageCount > 0 else { return nil }
+        var pages: [String] = []
+        for i in 0..<min(doc.pageCount, maxPages) {
+            if let s = doc.page(at: i)?.string,
+               !s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                pages.append(s)
+            }
+        }
+        let text = pages.joined(separator: "\n\n")
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        return String(text.prefix(maxChars))
+    }
+
+    /// The PDF's embedded Title metadata, if it carries one.
+    /// Used as a naming fallback when no text provider is configured or it fails.
+    static func pdfTitle(_ url: URL) -> String? {
+        guard let doc = PDFDocument(url: url), let cg = doc.documentRef, let info = cg.info else { return nil }
+        var titleRef: CGPDFStringRef?
+        guard CGPDFDictionaryGetString(info, "Title", &titleRef) else { return nil }
+        guard let raw = titleRef.flatMap({ CGPDFStringCopyTextString($0) as String? }) else { return nil }
+        let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? nil : t
+    }
 
     static func kind(of ext: String) -> FileKind {
         let e = ext.lowercased()

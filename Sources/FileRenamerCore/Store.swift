@@ -209,7 +209,10 @@ public final class Store {
         let url = URL(fileURLWithPath: folderPath)
         guard let items = try? FileManager.default.contentsOfDirectory(
             at: url, includingPropertiesForKeys: nil
-        ) else { return }
+        ) else {
+            log("error", "could not read folder \(url.lastPathComponent) (permission?)")
+            return
+        }
 
         let batchID = UUID()
         var enqueued = 0
@@ -271,6 +274,7 @@ public final class Store {
         if s.autoApprove {
             rename(s)
         } else {
+            log("proposed", "\(s.oldName) → \(s.proposedName) (awaiting approval)")
             pending.append(s)
             UI.shared.refresh()
         }

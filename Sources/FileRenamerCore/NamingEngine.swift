@@ -55,29 +55,52 @@ enum NamingEngine {
             }
         }
 
-        // Text
+        // Text (PDFs are read via PDFKit; everything else as raw UTF-8)
+        let nameWith: (String, String) -> NamingResult? = { stem, source in
+            guard !stem.isEmpty else { return nil }
+            let name = "\(dateStr)\(stem).\(extCasePreserved(url: url, ext: ext))"
+            guard name != url.lastPathComponent else { return nil }
+            return .suggestion(Suggestion(url: url, proposedName: name, source: source, autoApprove: autoApprove, batchID: batchID))
+        }
+        // PDF-only fallback: use the document's embedded Title metadata rather than give up.
+        func titleFallback(_ skip: String) -> NamingResult {
+            if ext == "pdf", let t = Naming.pdfTitle(url) {
+                let stem = Naming.sanitize(t, style: style.caseStyle)
+                if let s = nameWith(stem, "pdf title") { return s }
+            }
+            return .skipped(skip)
+        }
+
         guard let prov = settings.provider(id: settings.textProviderID) else {
-            return .skipped("no text provider configured")
+            return titleFallback("no text provider configured")
         }
-        guard let content = try? String(contentsOf: url, encoding: .utf8) else {
-            return .skipped("not readable as text")
+
+        let head: String
+        if ext == "pdf" {
+            guard let text = Naming.pdfText(url) else {
+                return titleFallback("no extractable text in PDF (scanned or protected)")
+            }
+            head = text
+        } else {
+            guard let content = try? String(contentsOf: url, encoding: .utf8) else {
+                return .skipped("not readable as text")
+            }
+            // skip files that are not mostly human-readable text
+            let bad = content.unicodeScalars.filter { !CharacterSet.whitespacesAndNewlines.contains($0) && ($0.value < 0x20 || $0.value == 0xFFFD) }.count
+            if bad * 20 > content.count { return .skipped("binary content") }
+            guard !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return .skipped("empty file")
+            }
+            head = String(content.prefix(4000))
         }
-        // skip files that are not mostly human-readable text
-        let bad = content.unicodeScalars.filter { !CharacterSet.whitespacesAndNewlines.contains($0) && ($0.value < 0x20 || $0.value == 0xFFFD) }.count
-        if bad * 20 > content.count { return .skipped("binary content") }
-        let head = String(content.prefix(4000))
-        guard !head.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return .skipped("empty file")
-        }
+
         do {
             let raw = try await AI.ask(prov, prompt: Naming.textPrompt(head, style: style))
             let stem = Naming.sanitize(raw, style: style.caseStyle)
-            guard !stem.isEmpty else { return .skipped("provider returned no usable name") }
-            let name = "\(dateStr)\(stem).\(extCasePreserved(url: url, ext: ext))"
-            guard name != url.lastPathComponent else { return .skipped("suggested name unchanged") }
-            return .suggestion(Suggestion(url: url, proposedName: name, source: prov.name, autoApprove: autoApprove, batchID: batchID))
+            guard !stem.isEmpty else { return titleFallback("provider returned no usable name") }
+            return nameWith(stem, prov.name) ?? .skipped("suggested name unchanged")
         } catch {
-            return .skipped("provider error: \(error.localizedDescription)")
+            return titleFallback("provider error: \(error.localizedDescription)")
         }
     }
 
