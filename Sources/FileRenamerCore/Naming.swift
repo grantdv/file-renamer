@@ -35,7 +35,7 @@ enum Naming {
             for w in words.dropFirst() { s += w.prefix(1).uppercased() + w.dropFirst() }
             return String(s.prefix(40))
         case .title:
-            var s = words.map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined(separator: " ")
+            let s = words.map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined(separator: " ")
             return String(s.prefix(40))
         }
     }

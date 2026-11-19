@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.title = "📎"
+        installDropTarget()
 
         let menu = NSMenu()
         menu.delegate = self
@@ -74,7 +75,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(add)
         let pick = NSMenuItem(title: "Rename Files…", action: #selector(openRenamePanel), keyEquivalent: "r")
         pick.target = self
-        pick.toolTip = "Pick one or more files right now (or use Finder: right-click → Services → Rename with AI FileRenamer)"
+        pick.toolTip = "Pick files in a panel, or drag files onto the 📎 icon in the menu bar"
         menu.addItem(pick)
         menu.addItem(.separator())
 
@@ -187,13 +188,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         panel.prompt = "Rename"
         panel.message = "Choose one or more files to name"
         guard panel.runModal() == .OK, !panel.urls.isEmpty else { return }
-        let paths = panel.urls.map { $0.path }
+        startRename(paths: panel.urls.map { $0.path })
+    }
+
+    /// Shared entry point for ad-hoc renames (file panel, drag onto the icon,
+    /// Finder Services). Each drop/selection is one batch, processed
+    /// sequentially, and undoable as a unit.
+    private func startRename(paths: [String]) {
+        guard !paths.isEmpty else { return }
         UI.shared.notify("Naming \(paths.count) file\(paths.count == 1 ? "" : "s")…")
         Task { @MainActor in
             let r = await Store.shared.renameSelectedFiles(paths)
             let note = Store.shared.pending.isEmpty ? "" : " Check the menu to approve."
             UI.shared.notify("Done: \(r.done) named, \(r.skipped) skipped.\(note)")
         }
+    }
+
+    /// Drag & drop: a transparent view over the menu bar icon accepts file
+    /// drags; clicks pass straight through to the button/menu.
+    private func installDropTarget() {
+        guard let button = statusItem.button else { return }
+        let drop = DropTargetView(frame: button.bounds)
+        drop.autoresizingMask = [.width, .height]
+        drop.button = button
+        drop.onFiles = { [weak self] urls in
+            self?.startRename(paths: urls.map { $0.path })
+        }
+        button.addSubview(drop)
     }
 
     /// Finder Services entry (“Rename with AI FileRenamer”). macOS sends an
@@ -206,12 +227,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 else if let u = o as? URL { paths.append(u.path) }
             }
         }
-        guard !paths.isEmpty else { return }
-        Task { @MainActor in
-            let r = await Store.shared.renameSelectedFiles(paths)
-            let note = Store.shared.pending.isEmpty ? "" : " Check the menu to approve."
-            UI.shared.notify("Done: \(r.done) named, \(r.skipped) skipped.\(note)")
-        }
+        startRename(paths: paths)
     }
 
     @objc private func openActivity() {

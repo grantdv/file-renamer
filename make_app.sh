@@ -45,7 +45,11 @@ cat > "$APP/Contents/Info.plist" <<'EOF'
 EOF
 
 # ---------- Finder Services helper ----------
-SVC=FileRenamerService.app
+# Built directly into ~/Library/Services. Do NOT also keep a copy in the
+# project directory: two bundles sharing the service's CFBundleIdentifier
+# confuse LaunchServices and the Services menu drops the entry.
+SERVICES_DIR="$HOME/Library/Services"
+SVC="$SERVICES_DIR/AI FileRenamer.service"
 rm -rf "$SVC"
 mkdir -p "$SVC/Contents/MacOS"
 cp .build/release/FileRenamerService "$SVC/Contents/MacOS/FileRenamerService"
@@ -98,16 +102,12 @@ EOF
 codesign --force --sign - "$APP" 2>/dev/null || true
 codesign --force --sign - "$SVC" 2>/dev/null || true
 
-# ---------- Install the service ----------
-SERVICES_DIR="$HOME/Library/Services"
-mkdir -p "$SERVICES_DIR"
-rm -rf "$SERVICES_DIR/AI FileRenamer.service"
-cp -R "$SVC" "$SERVICES_DIR/AI FileRenamer.service"
-# Make LaunchServices notice it immediately (usually happens on its own,
-# but this avoids a logout in the common case).
+# Make LaunchServices and the Services menu (pbs daemon) notice it right
+# away — otherwise this can take until the next login.
 LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
-"$LSREGISTER" -f "$SERVICES_DIR/AI FileRenamer.service" 2>/dev/null || true
+"$LSREGISTER" -f "$SVC" 2>/dev/null || true
+killall pbs 2>/dev/null || true   # pbs rebuilds its service database on restart
 
-echo "Built $APP and $SVC"
-echo "Installed service to $SERVICES_DIR/AI FileRenamer.service"
+echo "Built $APP"
+echo "Installed service to $SVC"
 echo "Run the app with: open $APP"

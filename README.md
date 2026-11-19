@@ -51,11 +51,14 @@ If you want a folder re-named anyway, there are explicit ways below.
 ./make_app.sh
 ```
 
-This builds release binaries and assembles two bundles:
+This builds release binaries and assembles:
 
-- `FileRenamer.app` — the menu bar app
-- `FileRenamerService.app` — the Finder Services helper, installed to
-  `~/Library/Services/` so it shows up in Finder's right-click → Services menu
+- `FileRenamer.app` — the menu bar app (drag files onto its 📎 icon to
+  rename them impromptu)
+- `~/Library/Services/AI FileRenamer.service` — the Finder Services helper,
+  built directly into `~/Library/Services/` so it shows up in Finder's
+  right-click → Services menu (keeping two copies with the same bundle ID
+  elsewhere would confuse LaunchServices, so it lives in exactly one place)
 
 ## Run
 
@@ -101,8 +104,12 @@ Configured once, in Settings (not per prompt):
 
 ## Renaming on demand (not just watched folders)
 
-Three ways to point the app at files directly:
+Four ways to point the app at files directly:
 
+- **Drag files onto the 📎 menu bar icon** — the recommended way for
+  impromptu renames. Select one or many files in Finder, drag them onto the
+  icon (it turns into 📥 while hovering), drop. The whole drop is one batch,
+  processed one file at a time, and one "Undo Last Batch" reverts it all.
 - **Menu bar → Rename Files… (⌘R)** — pick one or many files in a file
   picker. Anything is fair game, not just watched folders.
 - **Finder: right-click a file → Services → "Rename with AI FileRenamer"** —
@@ -111,8 +118,10 @@ Three ways to point the app at files directly:
 - **Menu bar → folder → "Rename all files in folder…"** — re-scan a watched
   folder and rename everything in it, including files that look already-named.
 
-All three force naming: they bypass the "new files only" and "looks already
-named" heuristics.
+All four force naming: they bypass the "new files only" and "looks already
+named" heuristics. Files inside a watched folder follow that folder's
+auto-approve setting; files from anywhere else always land in the pending
+approval list.
 
 ## Per-folder settings
 

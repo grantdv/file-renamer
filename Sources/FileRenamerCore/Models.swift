@@ -48,7 +48,13 @@ public struct FolderConfig: Codable, Equatable, Identifiable {
 public enum DatePrefixMode: String, Codable {
     case off, images, all
 
-    public init(rawValue: String) { self = DatePrefixMode(rawValue: rawValue) ?? .images }
+    /// Tolerant decode: an unknown value (e.g. from a newer app version)
+    /// falls back to a safe default instead of failing the whole settings file.
+    public init(from decoder: Decoder) throws {
+        let raw = (try? decoder.singleValueContainer().decode(String.self)) ?? ""
+        self = DatePrefixMode(rawValue: raw) ?? .images
+    }
+
     public static let allCases: [DatePrefixMode] = [.off, .images, .all]
 
     public var display: String {
@@ -63,7 +69,11 @@ public enum DatePrefixMode: String, Codable {
 public enum CaseStyle: String, Codable {
     case kebab, camel, title
 
-    public init(rawValue: String) { self = CaseStyle(rawValue: rawValue) ?? .kebab }
+    public init(from decoder: Decoder) throws {
+        let raw = (try? decoder.singleValueContainer().decode(String.self)) ?? ""
+        self = CaseStyle(rawValue: raw) ?? .kebab
+    }
+
     public static let allCases: [CaseStyle] = [.kebab, .camel, .title]
 
     public var display: String {
@@ -78,7 +88,11 @@ public enum CaseStyle: String, Codable {
 public enum WordCountStyle: String, Codable {
     case short, medium, long
 
-    public init(rawValue: String) { self = WordCountStyle(rawValue: rawValue) ?? .medium }
+    public init(from decoder: Decoder) throws {
+        let raw = (try? decoder.singleValueContainer().decode(String.self)) ?? ""
+        self = WordCountStyle(rawValue: raw) ?? .medium
+    }
+
     public static let allCases: [WordCountStyle] = [.short, .medium, .long]
 
     public var range: String {
