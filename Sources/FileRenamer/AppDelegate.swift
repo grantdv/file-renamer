@@ -1,4 +1,5 @@
 import AppKit
+import FileRenamerCore
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
@@ -13,11 +14,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem.menu = menu
 
         UI.shared.onRefresh = { [weak self] in
-            self?.statusItem.menu?.update()
+            guard let self else { return }
+            self.statusItem.button?.title = Store.shared.pending.isEmpty
+                ? "📎"
+                : "📎 \(Store.shared.pending.count)"
+            ActivityWindow.shared.refresh()
+            self.statusItem.menu?.update()
         }
         UI.shared.onOpenSettings = { [weak self] in self?.openSettings() }
 
         Store.shared.restartWatchers()
+    }
+
+    /// Menu bar app: closing the last window (e.g. the splash) must never quit us.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
     }
 
     // MARK: - Menu
@@ -31,7 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let store = Store.shared
         let s = store.settings
 
-        addDisabled(menu, s.folders.isEmpty ? "FileRenamer — no folders yet" : "FileRenamer")
+        addDisabled(menu, s.folders.isEmpty ? "AI FileRenamer — no folders yet" : "AI FileRenamer")
         menu.addItem(.separator())
 
         // Folders
@@ -42,6 +53,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             auto.representedObject = f.path
             auto.state = f.autoApprove ? .on : .off
             sub.addItem(auto)
+            sub.addItem(.separator())
+            let scan = NSMenuItem(title: "Rename all files in folder…", action: #selector(renameAll(_:)), keyEquivalent: "")
+            scan.target = self
+            scan.representedObject = f.path
+            scan.toolTip = "Name every file in this folder, including files that existed before you added it"
+            sub.addItem(scan)
+            sub.addItem(.separator())
             let rm = NSMenuItem(title: "Remove folder", action: #selector(removeFolder(_:)), keyEquivalent: "")
             rm.target = self
             rm.representedObject = f.path
@@ -54,6 +72,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let add = NSMenuItem(title: "Add Folder…", action: #selector(addFolder), keyEquivalent: "a")
         add.target = self
         menu.addItem(add)
+        let pick = NSMenuItem(title: "Rename Files…", action: #selector(openRenamePanel), keyEquivalent: "r")
+        pick.target = self
+        pick.toolTip = "Pick one or more files right now (or use Finder: right-click → Services → Rename with AI FileRenamer)"
+        menu.addItem(pick)
         menu.addItem(.separator())
 
         // Pending suggestions
@@ -86,30 +108,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         pause.target = self
         menu.addItem(pause)
 
-        // Recent renames
-        let recent = Array(s_records(store).reversed())
+        // Recent activity
+        let recent = Array(store.events.suffix(8)).reversed()
         if !recent.isEmpty {
             menu.addItem(.separator())
-            addDisabled(menu, "Recent")
-            for r in recent {
-                let it = NSMenuItem(
-                    title: "↩ \(URL(fileURLWithPath: r.oldPath).lastPathComponent) → \(URL(fileURLWithPath: r.newPath).lastPathComponent)",
-                    action: nil, keyEquivalent: "")
+            addDisabled(menu, "Activity (newest first)")
+            for e in recent {
+                let it = NSMenuItem(title: e.line, action: nil, keyEquivalent: "")
                 it.isEnabled = false
                 menu.addItem(it)
             }
         }
 
         menu.addItem(.separator())
+        let act = NSMenuItem(title: "Activity…", action: #selector(openActivity), keyEquivalent: "")
+        act.target = self
+        menu.addItem(act)
+        let about = NSMenuItem(title: "About AI FileRenamer…", action: #selector(showAbout), keyEquivalent: "")
+        about.target = self
+        menu.addItem(about)
         let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
-        menu.addItem(NSMenuItem(title: "Quit FileRenamer",
+        menu.addItem(NSMenuItem(title: "Quit AI FileRenamer",
                                 action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
     }
 
-    private func s_records(_ store: Store) -> [RenameRecord] {
-        Array(store.records.suffix(5))
+    @objc private func showAbout() {
+        NSApp.orderFrontStandardAboutPanel(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     private func addDisabled(_ menu: NSMenu, _ title: String) {
@@ -144,6 +171,51 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func toggleAuto(_ sender: NSMenuItem) {
         guard let p = sender.representedObject as? String else { return }
         Store.shared.toggleAutoApprove(path: p)
+    }
+
+    @objc private func renameAll(_ sender: NSMenuItem) {
+        guard let p = sender.representedObject as? String else { return }
+        Store.shared.renameAllFiles(in: p)
+    }
+
+    /// “Rename Files…” — pick any files right now, outside watched folders.
+    @objc private func openRenamePanel() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = true
+        panel.prompt = "Rename"
+        panel.message = "Choose one or more files to name"
+        guard panel.runModal() == .OK, !panel.urls.isEmpty else { return }
+        let paths = panel.urls.map { $0.path }
+        UI.shared.notify("Naming \(paths.count) file\(paths.count == 1 ? "" : "s")…")
+        Task { @MainActor in
+            let r = await Store.shared.renameSelectedFiles(paths)
+            let note = Store.shared.pending.isEmpty ? "" : " Check the menu to approve."
+            UI.shared.notify("Done: \(r.done) named, \(r.skipped) skipped.\(note)")
+        }
+    }
+
+    /// Finder Services entry (“Rename with AI FileRenamer”). macOS sends an
+    /// array of file paths as strings (or URLs) as the argument.
+    @objc func openFiles(_ sender: Any?) {
+        var paths: [String] = []
+        if let arr = sender as? [Any] {
+            for o in arr {
+                if let s = o as? String { paths.append(s) }
+                else if let u = o as? URL { paths.append(u.path) }
+            }
+        }
+        guard !paths.isEmpty else { return }
+        Task { @MainActor in
+            let r = await Store.shared.renameSelectedFiles(paths)
+            let note = Store.shared.pending.isEmpty ? "" : " Check the menu to approve."
+            UI.shared.notify("Done: \(r.done) named, \(r.skipped) skipped.\(note)")
+        }
+    }
+
+    @objc private func openActivity() {
+        ActivityWindow.shared.show()
     }
 
     @objc private func approve(_ sender: NSMenuItem) {

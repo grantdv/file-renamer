@@ -1,4 +1,5 @@
 import AppKit
+import FileRenamerCore
 
 /// One editable row for a provider in the Settings window.
 final class ProviderRow: NSView {
@@ -13,14 +14,21 @@ final class ProviderRow: NSView {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         let w: CGFloat = frameRect.width
-        nameField.frame = NSRect(x: 0, y: 4, width: 120, height: 22)
-        urlField.frame = NSRect(x: 128, y: 4, width: 250, height: 22)
-        modelField.frame = NSRect(x: 386, y: 4, width: 130, height: 22)
-        keyField.frame = NSRect(x: 524, y: 4, width: 150, height: 22)
-        visionCheck.frame = NSRect(x: 0, y: -18, width: 70, height: 20)
-        removeBtn.frame = NSRect(x: w - 30, y: 4, width: 26, height: 22)
+        // top line: fields + remove button (no overlaps)
+        nameField.frame = NSRect(x: 0, y: 24, width: 120, height: 22)
+        urlField.frame = NSRect(x: 128, y: 24, width: 250, height: 22)
+        modelField.frame = NSRect(x: 386, y: 24, width: 130, height: 22)
+        keyField.frame = NSRect(x: 524, y: 24, width: 118, height: 22)
+        removeBtn.frame = NSRect(x: max(0, w - 28), y: 24, width: 26, height: 22)
+        removeBtn.bezelStyle = .smallSquare
+        removeBtn.font = NSFont.systemFont(ofSize: 12, weight: .semibold)
+        removeBtn.contentTintColor = .secondaryLabelColor
+        removeBtn.toolTip = "Remove this provider"
         removeBtn.target = self
         removeBtn.action = #selector(removeSelf)
+        // bottom line: vision checkbox
+        visionCheck.frame = NSRect(x: 0, y: 0, width: 90, height: 20)
+        visionCheck.toolTip = "This provider can see images (needed for the image route)"
         visionCheck.state = .off
         addSubview(nameField)
         addSubview(urlField)
@@ -31,6 +39,13 @@ final class ProviderRow: NSView {
     }
 
     required init?(coder: NSCoder) { fatalError() }
+
+    /// The row is created with a zero frame and sized later, so place the
+    /// remove button relative to the real width once layout runs.
+    override func layout() {
+        super.layout()
+        removeBtn.frame = NSRect(x: bounds.width - 28, y: 24, width: 26, height: 22)
+    }
 
     func load(_ p: Provider) {
         nameField.stringValue = p.name
@@ -59,5 +74,5 @@ final class ProviderRow: NSView {
     }
 
     /// Height including the vision checkbox row.
-    static let rowHeight: CGFloat = 44
+    static let rowHeight: CGFloat = 48
 }

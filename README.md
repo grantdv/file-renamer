@@ -1,8 +1,8 @@
-# FileRenamer
+# AI FileRenamer
 
 A macOS menu bar app that watches folders and uses LLMs to give new files
 descriptive names. Drop a photo in, and it becomes
-`2025-07-11-golden-retriever-in-snow.jpg`. Drop in a markdown report, and it
+`2026-11-19-golden-retriever-in-snow.jpg`. Drop in a markdown report, and it
 becomes `quarterly-revenue-report.md`.
 
 Built as a Swift Package — no Xcode project needed.
@@ -18,7 +18,7 @@ classify (extension) ──► image  ──► routed to your "image" provider 
                     └────────────────► anything else: ignored
       │
       ▼
-provider returns a name stem  →  sanitized (kebab-case, ≤40 chars)
+provider returns a name stem  →  sanitized (kebab-case / camelCase / Title Case, ≤40 chars)
       │
       ▼
 auto-approve on?  ──►  rename now (notify)
@@ -35,6 +35,11 @@ model for both, or two different ones. If the image provider is unreachable,
 photos fall back to a date-based name; if the text provider is down, text
 files are left untouched.
 
+**New files only, by default.** Adding a folder does not re-name what's
+already in it. Files whose names already look human-chosen are left alone
+(`IMG_1234.jpg`-style names, UUIDs, `Screenshot 2026-01-01…` etc. get renamed).
+If you want a folder re-named anyway, there are explicit ways below.
+
 ## Requirements
 
 - macOS 13+
@@ -43,17 +48,26 @@ files are left untouched.
 ## Build
 
 ```sh
-swift build
+./make_app.sh
 ```
+
+This builds release binaries and assembles two bundles:
+
+- `FileRenamer.app` — the menu bar app
+- `FileRenamerService.app` — the Finder Services helper, installed to
+  `~/Library/Services/` so it shows up in Finder's right-click → Services menu
 
 ## Run
 
 ```sh
-swift run
+open FileRenamer.app
 ```
 
-A paperclip (📎) appears in the menu bar. It starts with no folders — that's
-by design, yours are yours to pick.
+(A paperclip 📎 appears in the menu bar. It starts with no folders — that's
+by design, yours are yours to pick.)
+
+> Note: run the `.app` bundle, not the bare binary — a bare process launched
+> from a terminal doesn't get a menu bar item.
 
 ## First run
 
@@ -68,16 +82,49 @@ by design, yours are yours to pick.
        or a pi `~/.pi/agent/models.json` endpoint). It never sends your keys
        anywhere; it just reads them off this machine.
    - **Routing:** pick which provider names images, and which names text.
+   - **Naming style:** how names are shaped (see below).
    - **Save.**
 3. Drop a file into the watched folder. Either it renames itself (if that
    folder is set to auto-approve) or it appears under **Pending approval** in
    the menu.
+
+## Naming style
+
+Configured once, in Settings (not per prompt):
+
+| Knob        | Options                                            |
+|-------------|----------------------------------------------------|
+| Date prefix | Off · Images only · All files                       |
+| Case        | Kebab-case · camelCase · Title Case                 |
+| Words       | 2–4 · 3–6 · 4–8                                     |
+| Custom rules| free text appended to the prompt, e.g. "start with the location" |
+
+## Renaming on demand (not just watched folders)
+
+Three ways to point the app at files directly:
+
+- **Menu bar → Rename Files… (⌘R)** — pick one or many files in a file
+  picker. Anything is fair game, not just watched folders.
+- **Finder: right-click a file → Services → "Rename with AI FileRenamer"** —
+  works for one or many files. You need to run `./make_app.sh` once (it
+  installs the service into `~/Library/Services/`).
+- **Menu bar → folder → "Rename all files in folder…"** — re-scan a watched
+  folder and rename everything in it, including files that look already-named.
+
+All three force naming: they bypass the "new files only" and "looks already
+named" heuristics.
 
 ## Per-folder settings
 
 Each watched folder has its own **Auto-approve** toggle in its menu-bar
 submenu. Leave it off to review every rename; turn it on for folders where
 you trust the model.
+
+## Activity
+
+The menu bar shows the last few events; **Activity…** opens the full log
+(what got queued, named, skipped, and why — including failures like a
+provider being down).
 
 ## Privacy
 
@@ -98,9 +145,9 @@ you trust the model.
 
 ## For contributors (Brandon)
 
-Clone, `swift run`, add your own folders and providers in Settings. No
-secrets live in this repo — if you find one, tell Grant, delete it, and we
-rotate the key.
+Clone, `./make_app.sh`, `open FileRenamer.app`, add your own folders and
+providers in Settings. No secrets live in this repo — if you find one, tell
+Grant, delete it, and we rotate the key.
 
 ## License
 

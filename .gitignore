@@ -11,6 +11,10 @@ DerivedData/
 Packages/
 Package.resolved
 
+# Local build artifacts (produced by make_app.sh)
+FileRenamer.app/
+FileRenamerService.app/
+
 # Keys never belong in the repo
 *.key
 *.pem
