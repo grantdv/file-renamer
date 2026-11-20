@@ -27,18 +27,24 @@ becomes `form-1099-nec-2025.pdf`.
 open FileRenamer.app   # 📎 appears in the menu bar
 ```
 
-1. **Menu bar → Add Folder…** — pick a folder to watch.
-2. **Menu bar → Settings…** — add provider(s) (name, base URL, key, model,
+1. **Menu bar → Settings…** — add provider(s) (name, base URL, key, model,
    vision ✓), choose routing (which provider names images / text), and
    pick a naming style. "Import my local setup…" pre-fills what it can
    find already on your machine.
+2. **Menu bar → Add Folder…** — pick a folder to watch.
 3. Drop a file in. Auto-approve is off by default, so it lands in
    **Pending approval** in the menu — click it (or **Approve All**) to rename.
+
+First time? **[docs/SETUP.md](docs/SETUP.md)** walks through all of this
+with exact values for every field (OpenAI, Ollama, llama.cpp, LM Studio,
+and other OpenAI-compatible servers).
 
 Requirements: macOS 13+, Swift 5.9+ (ships with Xcode).
 
 ## Documentation
 
+- **[docs/SETUP.md](docs/SETUP.md)** — first-time setup walkthrough with
+  exact provider field values (start here)
 - **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** — user help: setup, daily
   use, naming style, undo, troubleshooting, privacy
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — developer doc:

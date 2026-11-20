@@ -34,6 +34,10 @@ To update after pulling new code, just re-run `./make_app.sh` and
 
 ## First run: 3 things to set up
 
+> **Want exact, copy-paste values for every field** (OpenAI, Ollama,
+> llama.cpp, LM Studio, other OpenAI-compatible servers)? Follow
+> **[SETUP.md](SETUP.md)** — this section is the short version.
+
 ### 1. Providers (the brains)
 
 **Menu bar → Settings… → Providers.** A provider is any
