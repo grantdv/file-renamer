@@ -93,29 +93,21 @@ ollama pull llama3.2      # text + vision in one model
 If you pull a non-vision model instead (e.g. `llama3.1`), leave the
 checkbox off and use the provider for the Text route only.
 
-### Scenario C — llama.cpp server (Grant's setup, for reference)
+### Scenario C — self-hosted llama.cpp server
 
-Grant's machine runs llama.cpp serving a Qwen GGUF. If you're on his
-network you can point straight at it:
-
-| Field | Value |
-|---|---|
-| Name | `Local LLM` |
-| Base URL | `http://<server-host>:8188` |
-| Model | `your-model-id` |
-| API Key | whatever the server expects (it's set in Grant's setup) |
-| vision | **unchecked** (this Qwen build is text-only) |
-
-Running your own llama.cpp server instead?
+Running (or joining) a llama.cpp server on your own network?
 
 ```bash
 llama-server -m your-model.gguf --port 8188
 ```
 
-Then Base URL `http://localhost:8188` (llama.cpp accepts both
-`/chat/completions` and `/v1/chat/completions`), Model = however the
-server advertises the model (check the server's startup log — it prints
-the model id).
+| Field | Value |
+|---|---|
+| Name | `Local LLM` |
+| Base URL | `http://<server-host>:8188` (the machine running llama.cpp) |
+| Model | however the server advertises the model (check the server's startup log — it prints the model id) |
+| API Key | whatever the server expects (often ignored — any placeholder works) |
+| vision | **checked** only if the model can see images (most GGUF text models can't) |
 
 ### Scenario D — LM Studio (local, GUI)
 
