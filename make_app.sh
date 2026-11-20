@@ -34,7 +34,7 @@ cat > "$APP/Contents/Info.plist" <<EOF
     <key>CFBundleDisplayName</key>
     <string>AI FileRenamer</string>
     <key>NSHumanReadableCopyright</key>
-    <string>Made by Grant</string>
+    <string>Made by Grant Della Vecchia</string>
     <key>CFBundleIdentifier</key>
     <string>local.grant.filerenamer</string>
     <key>CFBundleVersion</key>
