@@ -80,7 +80,7 @@ touched (see "Rename all files in folder…" if you want otherwise).
 
 | Kind | Extensions |
 |---|---|
-| **Images** (sent to your image provider as a downscaled ~1 MP image) | jpg, jpeg, png, heic, heif, webp, gif, tiff, bmp |
+| **Images** (sent to your image provider as a downscaled ~1 MP image) | jpg, jpeg, png, heic, heif, webp, gif, tiff, bmp, dng, cr3 (RAW decodes fine) |
 | **Text** (first ~4 KB read locally, sent to your text provider) | txt, md, markdown, csv, json, log, ini, toml, yaml, yml, xml, swift, py, js, ts, html, css, sh, rb, go, rs, c, h, cpp |
 | **PDFs** (first 5 pages of text extracted locally, sent to your text provider) | pdf |
 

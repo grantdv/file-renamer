@@ -4,7 +4,7 @@ import PDFKit
 // MARK: - Classification, naming rules, prompts
 
 enum Naming {
-    static let imageExts: Set<String> = ["jpg", "jpeg", "png", "heic", "heif", "webp", "gif", "tiff", "bmp"]
+    static let imageExts: Set<String> = ["jpg", "jpeg", "png", "heic", "heif", "webp", "gif", "tiff", "bmp", "dng", "cr3"]
     static let textExts: Set<String> = [
         "txt", "md", "markdown", "csv", "json", "log", "ini", "toml", "yaml", "yml", "xml",
         "swift", "py", "js", "ts", "html", "css", "sh", "rb", "go", "rs", "c", "h", "cpp",
