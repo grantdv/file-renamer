@@ -50,11 +50,11 @@ Requirements: macOS 13+, Swift 5.9+ (ships with Xcode).
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — developer doc:
   targets, pipeline, FSEvents details, persistence, build system, gotchas
 
-## For contributors (Brandon)
+## For contributors
 
 Clone, `./make_app.sh`, `open FileRenamer.app`, add your own folders and
 providers in Settings. No secrets live in this repo — if you find one,
-tell Grant, delete it, and we rotate the key.
+tell the maintainer, delete it, and rotate the key.
 
 ## License
 
