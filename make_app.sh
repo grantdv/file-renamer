@@ -6,14 +6,25 @@
 # Finder's right-click → Services menu.
 set -e
 cd "$(dirname "$0")"
+
+# ---------- Version (derived from git, never hand-edited) ----------
+# Version = latest vX.Y.Z tag on this branch (commits after the tag keep the
+# last release's version); build number = total commit count.
+# Release flow: make the changes, commit, `git tag v1.3.0`, run make_app.sh.
+VERSION=$(git describe --tags --match 'v[0-9]*' --first-parent 2>/dev/null | sed 's/^v//; s/-[0-9]*-g[0-9a-f]*$//')
+BUILD=$(git rev-list --count HEAD 2>/dev/null || echo 0)
+[ -n "$VERSION" ] || VERSION="0.0.0"
+echo "Building AI FileRenamer $VERSION (build $BUILD)"
+
 swift build -c release
 
 # ---------- Menu bar app ----------
 APP=FileRenamer.app
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/FileRenamer "$APP/Contents/MacOS/FileRenamer"
-cat > "$APP/Contents/Info.plist" <<'EOF'
+cp Assets/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+cat > "$APP/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -27,9 +38,11 @@ cat > "$APP/Contents/Info.plist" <<'EOF'
     <key>CFBundleIdentifier</key>
     <string>local.grant.filerenamer</string>
     <key>CFBundleVersion</key>
-    <string>1.1</string>
+    <string>$BUILD</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.1</string>
+    <string>$VERSION</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleExecutable</key>
     <string>FileRenamer</string>
     <key>CFBundlePackageType</key>
@@ -60,7 +73,7 @@ SVC="$SERVICES_DIR/AI FileRenamer.service"
 rm -rf "$SVC"
 mkdir -p "$SVC/Contents/MacOS"
 cp .build/release/FileRenamerService "$SVC/Contents/MacOS/FileRenamerService"
-cat > "$SVC/Contents/Info.plist" <<'EOF'
+cat > "$SVC/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -72,9 +85,9 @@ cat > "$SVC/Contents/Info.plist" <<'EOF'
     <key>CFBundleIdentifier</key>
     <string>local.grant.filerenamer.service</string>
     <key>CFBundleVersion</key>
-    <string>1.1</string>
+    <string>$BUILD</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.1</string>
+    <string>$VERSION</string>
     <key>CFBundleExecutable</key>
     <string>FileRenamerService</string>
     <key>CFBundlePackageType</key>
@@ -115,6 +128,6 @@ LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchSe
 "$LSREGISTER" -f "$SVC" 2>/dev/null || true
 killall pbs 2>/dev/null || true   # pbs rebuilds its service database on restart
 
-echo "Built $APP"
+echo "Built $APP (v$VERSION, build $BUILD)"
 echo "Installed service to $SVC"
 echo "Run the app with: open $APP"

@@ -41,6 +41,8 @@ Sources/
     main.swift                    ServiceDelegate,
                                   @objc RenameWithAIFileRenamer(_:)
 make_app.sh                       THE build entry point (see Build)
+Assets/AppIcon.icns               app icon (About panel, Finder, login items)
+scripts/make_icon.swift           regenerates the icon (see Build)
 ```
 
 **Visibility rule:** `FileRenamerCore` exposes only what the two
@@ -144,6 +146,24 @@ Both files in `~/Library/Application Support/FileRenamer/`, mode 600:
 3. builds the service **directly into** `~/Library/Services/AI FileRenamer.service`
    (with the NSServices plist: `NSSendFileTypes [public.file-url]`)
 4. ad-hoc signs both, `lsregister -f`, `killall pbs`
+
+**Versioning — derived from git, never hand-edited.** The Info.plist
+version comes from the newest `vX.Y.Z` tag reachable on the branch
+(`git describe`), and the build number is the total commit count. The
+About panel reads the Info.plist at launch, so it is always current for
+the running binary. Release flow: commit the work, `git tag v1.3.0`,
+run `make_app.sh`. Commits after a tag keep the tag's version but get a
+higher build number, so you can always tell which commit a given build
+was cut from.
+
+**Icon:** `Assets/AppIcon.icns` is a committed binary (paperclip on a
+dark slate square, same glyph as the menu bar item). To re-skin:
+edit the colors at the top of `scripts/make_icon.swift`, then
+
+```
+swift scripts/make_icon.swift /tmp/iconbuild
+iconutil -c icns /tmp/iconbuild/AppIcon.iconset -o Assets/AppIcon.icns
+```
 
 **Do not build a second copy of the service anywhere else** — LaunchServices
 resolves NSServices by bundle ID, and a duplicate registration (e.g. a
