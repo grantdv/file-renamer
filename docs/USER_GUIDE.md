@@ -113,11 +113,19 @@ a slow model just means a queue, not chaos.
 
 ### Pending approval
 
-In the menu you'll see each suggestion as `old name → new name` with a ✓.
-Click it to approve (or ignore it forever — the file stays as it is).
-**Approve All (n)** takes the whole list. Pending items live in memory: if
-you quit the app without approving, they're discarded and the files remain
-untouched.
+In the menu, each suggestion appears as `old name → new name`; hover it for
+a submenu:
+
+- **✓ Approve** — rename it
+- **✕ Discard** — remove it from the list. Discarding is remembered: the
+  app won't re-propose that file on later scans (an explicit rename —
+  drag-drop, ⌘R, or "Rename all files in folder…" — still can name it)
+
+**Approve All (n)** takes the whole list; **Clear All Pending (n)** purges
+it (each entry also counts as discarded, so they don't come back). If you
+simply leave a suggestion unapproved, it stays in the list until you
+discard or clear it. Pending items live in memory: if you quit the app
+without acting, they're discarded and the files remain untouched.
 
 ### Undo
 

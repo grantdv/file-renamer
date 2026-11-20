@@ -14,6 +14,7 @@ public final class Store {
     private let dir: URL
     private var processed: Set<String> = []
     private var inFlight: Set<String> = []
+    private var discarded: Set<String> = []   // user rejected the suggestion; don't re-propose
     private var watchers: [FolderWatcher] = []
     private var queue: [URL] = []
     private var pumping = false
@@ -40,6 +41,7 @@ public final class Store {
             processed = Set(st.processed)
             records = st.records
             events = st.events
+            discarded = Set(st.discarded)
         }
         for r in records { processed.insert(r.newPath) }
     }
@@ -48,11 +50,13 @@ public final class Store {
         var processed: [String]
         var records: [RenameRecord]
         var events: [ActivityEvent]
+        var discarded: [String]
 
-        init(processed: [String], records: [RenameRecord], events: [ActivityEvent]) {
+        init(processed: [String], records: [RenameRecord], events: [ActivityEvent], discarded: [String]) {
             self.processed = processed
             self.records = records
             self.events = events
+            self.discarded = discarded
         }
 
         init(from decoder: Decoder) throws {
@@ -60,6 +64,7 @@ public final class Store {
             processed = try c.decodeIfPresent([String].self, forKey: .processed) ?? []
             records = try c.decodeIfPresent([RenameRecord].self, forKey: .records) ?? []
             events = try c.decodeIfPresent([ActivityEvent].self, forKey: .events) ?? []
+            discarded = try c.decodeIfPresent([String].self, forKey: .discarded) ?? []
         }
     }
 
@@ -87,7 +92,8 @@ public final class Store {
     func saveState() {
         do {
             let enc = JSONEncoder()
-            try enc.encode(StoreState(processed: Array(processed), records: records, events: events))
+            try enc.encode(StoreState(processed: Array(processed), records: records,
+                                      events: events, discarded: Array(discarded)))
                 .write(to: stateURL, options: .atomic)
         } catch {
             NSLog("FileRenamer: failed to save state: \(error)")
@@ -220,6 +226,9 @@ public final class Store {
             guard item.isRegularFile, !item.lastPathComponent.hasPrefix(".") else { continue }
             let p = item.path
             guard !processed.contains(p), !inFlight.contains(p) else { continue }
+            guard !pending.contains(where: { $0.url.path == p }) else { continue }
+            // Explicit actions (force) can still name a previously discarded file.
+            if !force, discarded.contains(p) { continue }
             guard Naming.kind(of: item.pathExtension) != .unsupported else { continue }
             // Default: only files that arrived AFTER the folder was added.
             // “Rename all files in folder…” (force) bypasses this gate.
@@ -298,6 +307,7 @@ public final class Store {
             return false
         }
         pending.removeAll { $0.id == s.id }
+        discarded.remove(s.url.path)
         processed.insert(s.url.path)
         processed.insert(target.path)
         lastBatchID = s.batchID
@@ -319,6 +329,21 @@ public final class Store {
     public func approve(_ id: UUID) {
         guard let s = pending.first(where: { $0.id == id }) else { return }
         rename(s)
+    }
+
+    public func discard(_ id: UUID) {
+        guard let s = pending.first(where: { $0.id == id }) else { return }
+        pending.removeAll { $0.id == id }
+        discarded.insert(s.url.path)
+        log("discarded", "\(s.oldName): suggestion discarded (\(s.proposedName))")
+    }
+
+    public func discardAllPending() {
+        guard !pending.isEmpty else { return }
+        let n = pending.count
+        for s in pending { discarded.insert(s.url.path) }
+        pending.removeAll()
+        log("discarded", "\(n) pending suggestion(s) cleared")
     }
 
     public func undoLastBatch() {

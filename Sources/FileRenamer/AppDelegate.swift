@@ -83,10 +83,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if !store.pending.isEmpty {
             addDisabled(menu, "Pending approval (\(store.pending.count))")
             for sug in store.pending.prefix(15) {
-                let it = NSMenuItem(title: "✓  \(sug.oldName)  →  \(sug.proposedName)",
-                                    action: #selector(approve(_:)), keyEquivalent: "")
-                it.target = self
-                it.representedObject = sug.id.uuidString
+                let it = NSMenuItem(title: "\(sug.oldName)  →  \(sug.proposedName)",
+                                    action: nil, keyEquivalent: "")
+                let sub = NSMenu()
+                let ap = NSMenuItem(title: "✓  Approve", action: #selector(approve(_:)), keyEquivalent: "")
+                ap.target = self
+                ap.representedObject = sug.id.uuidString
+                sub.addItem(ap)
+                let dis = NSMenuItem(title: "✕  Discard", action: #selector(discard(_:)), keyEquivalent: "")
+                dis.target = self
+                dis.representedObject = sug.id.uuidString
+                sub.addItem(dis)
+                it.submenu = sub
                 menu.addItem(it)
             }
             if store.pending.count > 15 {
@@ -96,6 +104,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                                  action: #selector(approveAll), keyEquivalent: "")
             all.target = self
             menu.addItem(all)
+            let clear = NSMenuItem(title: "Clear All Pending (\(store.pending.count))",
+                                   action: #selector(discardAll), keyEquivalent: "")
+            clear.target = self
+            menu.addItem(clear)
             menu.addItem(.separator())
         }
 
@@ -241,6 +253,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func approveAll() {
         Store.shared.approveAll()
+    }
+
+    @objc private func discard(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? String, let uuid = UUID(uuidString: id) else { return }
+        Store.shared.discard(uuid)
+    }
+
+    @objc private func discardAll() {
+        Store.shared.discardAllPending()
     }
 
     @objc private func undoBatch() {
