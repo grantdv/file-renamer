@@ -141,6 +141,12 @@ Every rename batch (one drop, one approval run) can be reversed with
 **⏸ Pause** freezes all watching and pending work instantly. Nothing is
 lost: queued and pending items wait until you hit **▶ Resume**.
 
+### Launch at Login
+
+**Launch at Login** (checkmark when on) makes the app start automatically
+after a reboot or login, so it never silently stops watching. It is off
+by default; turn it on once and it sticks.
+
 ### Per-folder settings
 
 Each folder has its own submenu in the menu:

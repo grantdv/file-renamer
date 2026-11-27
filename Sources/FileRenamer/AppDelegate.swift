@@ -1,4 +1,5 @@
 import AppKit
+import ServiceManagement
 import FileRenamerCore
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
@@ -134,6 +135,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         menu.addItem(.separator())
+        let login = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
+        login.target = self
+        login.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        menu.addItem(login)
         let act = NSMenuItem(title: "Activity…", action: #selector(openActivity), keyEquivalent: "")
         act.target = self
         menu.addItem(act)
@@ -145,6 +150,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(settingsItem)
         menu.addItem(NSMenuItem(title: "Quit AI FileRenamer",
                                 action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+    }
+
+    @objc private func toggleLaunchAtLogin(_ sender: NSMenuItem) {
+        Task { @MainActor in
+            let service = SMAppService.mainApp
+            do {
+                if service.status == .enabled {
+                    try await service.unregister()
+                    UI.shared.notify("Launch at Login is off.")
+                } else {
+                    try await service.register()
+                    UI.shared.notify("Launch at Login is on — the app will start after reboot.")
+                }
+                statusItem.menu?.update()
+            } catch {
+                UI.shared.notify("Launch at Login failed: \(error.localizedDescription)")
+            }
+        }
     }
 
     @objc private func showAbout() {
